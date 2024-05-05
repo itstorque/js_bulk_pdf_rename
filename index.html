@@ -89,7 +89,7 @@
         }
         function readPDFFile(pdf) {
             PDFJS.getDocument({ data: pdf }).then(function (pdf) {
-                $pdfPages.text(pdf.pdfInfo.numPages);
+                // $pdfPages.text(pdf.pdfInfo.numPages);
                 var pagesPromisesArray = new Array(pdf.pdfInfo.numPages + 1).join('0').split('').map(function (value, index) {
                     return pdf.getPage(++index);
                 });
@@ -121,7 +121,7 @@
                             }
 
                         });
-                        $pdfLinks.text(linkCounter);
+                        // $pdfLinks.text(linkCounter);
                         // $modal.modal('show')
                     });
                 });
@@ -129,7 +129,7 @@
         }
         function readPDFFile2(pdf, chosen_idx) {
             PDFJS.getDocument({ data: pdf }).then(function (pdf) {
-                $pdfPages.text(pdf.pdfInfo.numPages);
+                // $pdfPages.text(pdf.pdfInfo.numPages);
                 var pagesPromisesArray = new Array(pdf.pdfInfo.numPages + 1).join('0').split('').map(function (value, index) {
                     return pdf.getPage(++index);
                 });
@@ -149,7 +149,7 @@
                             pdf_div.appendChild(mycontent)
 
                         });
-                        $pdfLinks.text(linkCounter);
+                        // $pdfLinks.text(linkCounter);
                         // $modal.modal('show')
                     });
                 });
