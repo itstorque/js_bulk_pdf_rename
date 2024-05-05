@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width">
+    <title>JS Bin</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/es6-shim/0.34.1/es6-shim.js"></script>
+    <script src="https://code.jquery.com/jquery-2.1.4.js"></script>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" rel="stylesheet"
+        type="text/css" />
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+    <script src="https://frontenddeveloping.github.io/pdfjs-dist/build/pdf.js"></script>
+    <script src="https://frontenddeveloping.github.io/pdfjs-dist/build/pdf.worker.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" integrity="sha512-XMVd28F1oH/O71fzwBnV7HucLxVwtxf26XV8P4wPk26EDxuGZ91N8bsOttmnomcCD3CS5ZMRL50H0GgOHvegtg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.min.js" integrity="sha512-csNcFYJniKjJxRWRV1R7fvnXrycHP6qDR21mgz1ZP55xY5d+aHLfo9/FcGDQLfn2IfngbAHd8LdfsagcCqgTcQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+</head>
+
+<body>
+
+    <div class="modal fade" tabindex="-1" role="dialog">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
+                            aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title">PDF info</h4>
+                </div>
+                <div class="modal-body">
+                    <p>Pages: <span class="pdf-pages">in progress</span></p>
+                    <p>Links: <span class="pdf-links">in progress</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        #text_overlap a {
+            display: block;
+        }
+    </style>
+
+    <div id="text_overlap">
+
+        <h1>Step 1</h1>
+
+        <div class="container">
+            <p>Upload 1 PDF to select the field that becomes the name.</p>
+            <form>
+                <input type=file id=uploader>
+            </form>
+        </div>
+
+    </div>
+
+    <div id="step2" hidden>
+
+        <h1 id="step2_title">Step 2</h1>
+
+        <div class="container">
+            <p id="step2_text">Upload the rest of the pdfs here. Selected index: <b><span id="sel_idx_debug"></span></b></p>
+            <form id="step2_form">
+                <input type=file multiple id=uploader2>
+            </form>
+        </div>
+
+        <ol id="extracted_names_list">
+
+        </ol>
+
+        <a id="step3_button" onclick="download_files()" hidden>Download Files</a>
+
+    </div>
+
+
+    <script id="jsbin-source-javascript" type="text/javascript">
+        function processAnnotations(annotationsData) {
+            for (var i = 0; i < annotationsData.length; i++) {
+                var data = annotationsData[i];
+                console.log(data)
+                if (!data) {
+                    continue;
+                }
+                if (data.subtype === 'Link') {
+                    linkCounter++;
+                }
+            }
+        }
+        function readPDFFile(pdf) {
+            PDFJS.getDocument({ data: pdf }).then(function (pdf) {
+                $pdfPages.text(pdf.pdfInfo.numPages);
+                var pagesPromisesArray = new Array(pdf.pdfInfo.numPages + 1).join('0').split('').map(function (value, index) {
+                    return pdf.getPage(++index);
+                });
+
+                Promise.all(pagesPromisesArray).then(function (pages) {
+                    //   var pagesAnnotationsPromisesArray = pages.map(function(page) {
+                    //     return page.getAnnotations();
+                    //   });
+                    var pagesTextPromisesArray = pages.map(function (page) {
+                        return page.getTextContent();
+                    });
+                    //   Promise.all(pagesAnnotationsPromisesArray).then(function(annotationsDataArray) {
+                    //     annotationsDataArray.forEach(function(pageAnnotationsData) {
+                    //       processAnnotations(pageAnnotationsData);
+                    //     });
+                    //     $pdfLinks.text(linkCounter);
+                    //     $modal.modal('show')
+                    //   });
+                    Promise.all(pagesTextPromisesArray).then(function (textDataArray) {
+                        textDataArray.forEach(function (textData) {
+                            console.log(textData);
+                            pdf_div = document.getElementById("text_overlap")
+                            for (var i = 0; i < textData.items.length; i++) {
+                                const mycontent = document.createElement("a");
+                                mycontent.appendChild(document.createTextNode(textData.items[i].str));
+                                mycontent.setAttribute("data-pdf-text-index", i);
+                                mycontent.onclick = () => (choose_name_field(mycontent));
+                                pdf_div.appendChild(mycontent);
+                            }
+
+                        });
+                        $pdfLinks.text(linkCounter);
+                        // $modal.modal('show')
+                    });
+                });
+            });
+        }
+        function readPDFFile2(pdf, chosen_idx) {
+            PDFJS.getDocument({ data: pdf }).then(function (pdf) {
+                $pdfPages.text(pdf.pdfInfo.numPages);
+                var pagesPromisesArray = new Array(pdf.pdfInfo.numPages + 1).join('0').split('').map(function (value, index) {
+                    return pdf.getPage(++index);
+                });
+
+                Promise.all(pagesPromisesArray).then(function (pages) {
+                    var pagesTextPromisesArray = pages.map(function (page) {
+                        return page.getTextContent();
+                    });
+                    Promise.all(pagesTextPromisesArray).then(function (textDataArray) {
+                        textDataArray.forEach(function (textData) {
+                            console.log(textData);
+                            pdf_div = document.getElementById("extracted_names_list")
+                            files_to_save.push(pdf)
+                            files_names.push(textData.items[chosen_idx].str)
+                            const mycontent = document.createElement("li");
+                            mycontent.appendChild(document.createTextNode(textData.items[chosen_idx].str))
+                            pdf_div.appendChild(mycontent)
+
+                        });
+                        $pdfLinks.text(linkCounter);
+                        // $modal.modal('show')
+                    });
+                });
+            });
+        }
+        var linkCounter;
+        var $modal = $('.modal').modal('hide');
+        // var $pdfPages = $modal.find('.pdf-pages');
+        // var $pdfLinks = $modal.find('.pdf-links');
+        var files_to_save = []
+        var files_names = []
+        window.onload = function () {
+            document.getElementById('uploader').addEventListener('change', function () {
+                var file = this.files[0];
+                linkCounter = 0;
+                if (!file) {
+                    return;
+                }
+                var fileReader = new FileReader();
+                fileReader.onload = function (e) {
+                    readPDFFile(new Uint8Array(e.target.result));
+                };
+                fileReader.readAsArrayBuffer(file);
+            });
+        }
+
+            function choose_name_field(field) {
+                id = field.getAttribute("data-pdf-text-index")
+                document.getElementById("sel_idx_debug").appendChild(document.createTextNode(id))
+                step2(id)
+            }
+
+            function step2(id) {
+                document.getElementById("text_overlap").hidden = true
+                document.getElementById("step2").hidden = false
+                
+                console.log(document.getElementById('uploader2'))
+
+                document.getElementById('uploader2').addEventListener('change', function () {
+                    console.log("STEP 2 BEGIN")
+                    console.log(this.files)
+
+                    document.getElementById("step2_title").innerHTML = "Step 3"
+                    document.getElementById("step2_text").innerHTML = "Quickly check that these names are correct and hit download."
+                    document.getElementById("step2_form").hidden = true
+                    document.getElementById("step3_button").hidden = false
+                    
+                    for (const file_idx in this.files) {
+                        const file = this.files[file_idx]
+                        linkCounter = 0;
+                        if (!file) {
+                            return;
+                        }
+                        var fileReader = new FileReader();
+                        fileReader.onload = function (e) {
+                            readPDFFile2(new Uint8Array(e.target.result), id);
+                        };
+                        fileReader.readAsArrayBuffer(file);
+                    }
+
+                    // document.getElementById("step3_button").hidden = false
+                });
+            }
+
+            function download_files() {
+                console.log(files_to_save)
+                console.log(files_names)
+
+                const zip = new JSZip()
+
+                files_to_save.forEach((content, index) => {
+                    zip.file(`${files_names[index]}.pdf`, content.getData())
+                })
+
+                zip.generateAsync({ type: 'blob' }).then(blob => {
+                    saveAs(blob, 'renamed_pdfs.zip')
+                })
+                // const requests = [
+                //     '404.md',
+                //     '_config.yml',
+                // ].map(file => {
+                // return fetch('/jack/file/' + file)
+                //     .then(response => response.text())
+                //     .catch(console.error)
+                // })
+
+                // Promise.all(requests)
+                // .then(contents => {
+                //     const zip = new JSZip()
+
+                //     contents.forEach((content, index) => {
+                //         zip.file(`file-${index}.csv`, content)
+                //     })
+
+                //     return zip.generateAsync({ type: 'blob' })
+                // })
+                // .then(blob => {
+                //     saveAs(blob, 'files.zip')
+                // })
+            }
+
+            function gettext(pdf) {
+                return pdf.then(function (pdf) { // get all pages text
+                    var maxPages = pdf.pdfInfo.numPages;
+                    var countPromises = []; // collecting all page promises
+                    for (var j = 1; j <= maxPages; j++) {
+                        var page = pdf.getPage(j);
+
+                        var txt = "";
+                        countPromises.push(page.then(function (page) { // add page promise
+                            console.log(page)
+                            // debugger;
+
+                            var textContent = page.getTextContent();
+                            return textContent.then(function (text) { // return content promise
+                                return text.items.map(function (s) { return s.str; }); // value page text 
+                            });
+                        }));
+                    }
+                    // Wait for all pages and join text
+                    return Promise.all(countPromises).then(function (texts) {
+                        return texts.join('');
+                    });
+                });
+            }
+
+        // waiting on gettext to finish completion, or error
+        // gettext(PDFJS.getDocument("https://raw.githubusercontent.com/mozilla/pdf.js/ba2edeae/examples/learning/helloworld.pdf")).then(function (text) {
+        //     alert('parse ' + text);
+        // },
+        //     function (reason) {
+        //         console.error(reason);
+        //     });
+
+
+    </script>
+</body>
+
+</html>
